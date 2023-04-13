@@ -1,0 +1,109 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+    <div>
+        <h1>Products</h1>
+        <section>
+            <button onclick="orderV2()">buy <span id="selection">0</span> selected products</button>
+        </section>
+        <table>
+            <tr>
+                <th></th>
+                <th>name</th>
+                <th>description</th>
+                <th>price</th>
+                <th></th>
+            </tr>
+            {% for product in products %}
+                <tr>
+                    <td>
+                        <label>
+                            <input type="checkbox" class="select" data-product="{{ product.id }}">
+                        </label>
+                    </td>
+                    <td>{{ product.name }}</td>
+                    <td>{{ product.description }}</td>
+                    <td>{{ product.price }}</td>
+                    <td>
+                        <div id="{{ product.id }}" data-url="{{ url_for("api.orders.create_order") }}">
+                            <label>
+                                <span>Quantity</span>
+                                <input class="quantity" name="product.quantity" type="number"/>
+                            </label>
+                            <button onclick="orderV1({{ product.id }})">buy this product</button>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+    <script>
+
+        let selected_count = 0;
+
+        document.querySelectorAll(".select").forEach(m => {
+            m.addEventListener("change", (e) => {
+                if (e.target.checked) {
+                    selected_count++
+                } else {
+                    selected_count--
+                }
+
+                document.querySelector("#selection").textContent = selected_count.toString()
+            })
+        })
+
+        const orderV1 = async (id) => {
+            const form = document.getElementById(id);
+
+            const quantity = parseInt(form.querySelector(".quantity").value);
+
+            const response = await fetch({{ url_for("api.orders.create_order") }}, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({product: {id, quantity}})
+            })
+
+            const json = await response.json()
+
+            if (response.ok) {
+                alert(`order created with id ${json.id}`)
+            } else {
+                alert(JSON.stringify(json))
+            }
+        }
+
+        const orderV2 = async () => {
+            const selected = document.querySelectorAll(".select").values()
+
+            const ids = Array.from(selected).filter(m => m.checked).map(m => m.dataset.product)
+
+            const response = await fetch({{ url_for("api.orders.create_order") }}, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    products: ids.map(id => ({
+                        id: parseInt(id),
+                        quantity: (() => {
+                            const form = document.getElementById(id);
+
+                            return parseInt(form.querySelector(".quantity").value)
+                        })()
+                    }))
+                })
+            })
+
+            const json = await response.json()
+
+            if (response.ok) {
+                alert(`order created with id ${json.id} for products ${JSON.stringify(ids)}`)
+            } else {
+                alert(JSON.stringify(json))
+            }
+        }
+    </script>
+{% endblock %}
