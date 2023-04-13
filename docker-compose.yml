@@ -1,0 +1,45 @@
+name: session
+
+services:
+
+  database:
+    image: postgres:15.2-alpine
+    hostname: database.session
+    restart: always
+    env_file: .env.docker
+    environment:
+      POSTGRES_USER: ${APPLICATION_DATABASE_USER}
+      POSTGRES_PASSWORD: ${APPLICATION_DATABASE_PASSWORD}
+    ports:
+      - ${APPLICATION_DATABASE_PORT}:5432
+    volumes:
+      - db:/var/lib/postgresql/data
+
+  redis:
+    image: bitnami/redis:7.0.10
+    hostname: redis.session
+    env_file: .env.docker
+    ports:
+      - ${APPLICATION_REDIS_PORT}:6379
+
+  application:
+    hostname: application.session
+    env_file:
+      - .flaskenv
+      - .env.docker
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - database
+    ports:
+      - 8000:5000
+
+networks:
+  default:
+    name: backend
+    driver: bridge
+
+volumes:
+  db:
